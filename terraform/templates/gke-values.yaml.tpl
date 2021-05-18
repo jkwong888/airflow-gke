@@ -67,15 +67,15 @@ airflow:
       ## SSL
       ## NOTE: This effectively disables HTTP, so `web.readinessProbe.scheme` and `web.livenessProbe.scheme`
       ##       need to be set accordingly
-      AIRFLOW__WEBSERVER__WEB_SERVER_SSL_CERT: "/var/airflow/secrets/airflow-cluster1-cert/tls.crt"
-      AIRFLOW__WEBSERVER__WEB_SERVER_SSL_KEY: "/var/airflow/secrets/airflow-cluster1-cert/tls.key"
+      #AIRFLOW__WEBSERVER__WEB_SERVER_SSL_CERT: "/var/airflow/secrets/airflow-cluster1-cert/tls.crt"
+      #AIRFLOW__WEBSERVER__WEB_SERVER_SSL_KEY: "/var/airflow/secrets/airflow-cluster1-cert/tls.key"
 
       ## DAGS
       AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: "30"
 
       ## GCP Remote Logging
       AIRFLOW__CORE__REMOTE_LOGGING: "True"
-      AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER: "gs://XXXXXXXX--airflow-cluster1/airflow/logs"
+      AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER: "gs://${airflow_gcs_bucket}/airflow/logs"
       AIRFLOW__CORE__REMOTE_LOG_CONN_ID: "google_cloud_airflow"
 
       ## Email (SMTP)
@@ -159,10 +159,10 @@ web:
   ##
   service:
     annotations:
-      cloud.google.com/load-balancer-type: "Internal"
-    type: LoadBalancer
-    externalPort: 443
-    loadBalancerIP: XXX.XXX.XXX.XXX
+      cloud.google.com/neg: '{"ingress": true}' 
+    type: ClusterIP
+    externalPort: 80
+    loadBalancerIP: ${airflow_external_ip}
     loadBalancerSourceRanges: []
 
   ## sets `AIRFLOW__WEBSERVER__BASE_URL`
@@ -178,7 +178,7 @@ web:
   livenessProbe:
     ## the scheme used in the liveness probe: {HTTP,HTTPS}
     ##
-    scheme: HTTPS
+    scheme: HTTP
 
     ## the number of seconds to wait before checking pod health
     ##
@@ -187,6 +187,9 @@ web:
     ##   `airflow.extraPipPackages`, `web.extraPipPackages`, or `dags.installRequirements`
     ##
     initialDelaySeconds: 300
+  
+  readinessProbe:
+    scheme: HTTP
 
   ## the directory in which to mount secrets on web containers
   ##
@@ -320,14 +323,22 @@ logs:
 dags:
   ## configs for the DAG git repository & sync container
   ##
-  git:
+  gitSync:
+    ## enable the git-sync sidecar container
+    ##
+    enabled: true
+
+    ## the git sync interval in seconds
+    ##
+    syncWait: 60
+
     ## url of the git repository
     ##
-    url: "ssh://git@repo.example.com/my-airflow-dags.git"
+    repo: "${airflow_dags_git_repo}"
 
     ## the branch/tag/sha1 which we clone
     ##
-    ref: master
+    branch: main
 
     ## the name of a pre-created secret containing files for ~/.ssh/
     ##
@@ -336,39 +347,17 @@ dags:
     ## - the secret commonly includes files: id_rsa, id_rsa.pub, known_hosts
     ## - known_hosts is NOT NEEDED if `git.sshKeyscan` is true
     ##
-    secret: airflow-cluster1-git-keys
+    sshSecret: airflow-cluster1-git-keys
 
     ## the name of the private key file in your `git.secret`
     ##
     ## NOTE:
     ## - this is ONLY RELEVANT for PRIVATE SSH git repos
     ##
-    privateKeyName: id_rsa
+    sshSecretKey: id_rsa
 
-    ## the host name of the git repo
-    ##
-    ## NOTE:
-    ## - this is ONLY REQUIRED for SSH git repos
-    ##
-    repoHost: "repo.example.com"
+    sshKnownHosts: ""
 
-    ## the port of the git repo
-    ##
-    ## NOTE:
-    ## - this is ONLY REQUIRED for SSH git repos
-    ##
-    repoPort: 22
-
-    ## configs for the git-sync container
-    ##
-    gitSync:
-      ## enable the git-sync sidecar container
-      ##
-      enabled: true
-
-      ## the git sync interval in seconds
-      ##
-      refreshTime: 60
 
 ###################################
 # Kubernetes - RBAC
@@ -393,7 +382,7 @@ serviceAccount:
   ## annotations for the ServiceAccount
   ##
   annotations:
-    iam.gke.io/gcp-service-account: airflow-cluster1@MY_PROJECT_ID.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: ${airflow_sa}
 
 ###################################
 # Database - PostgreSQL Chart
@@ -413,22 +402,22 @@ externalDatabase:
 
   ## the host of the external database
   ##
-  host: mysql.airflow-cluster1.example.com
+  host: ${airflow_db_ip}
 
   ## the port of the external database
   ##
   port: 3306
 
   ## the database/scheme to use within the the external database
-  ##
-  database: airflow_cluster1
+  ## TODO
+  database: ${airflow_db_name}
 
   ## the user of the external database
-  ##
-  user: airflow_cluster1
+  ## TODO
+  user: ${airflow_db_username}
 
   ## the name of a pre-created secret containing the external database password
-  ##
+  ## TODO
   passwordSecret: airflow-cluster1-mysql-password
 
   ## the key within `externalDatabase.passwordSecret` containing the password string
@@ -495,3 +484,14 @@ redis:
       ## use a PVC to persist data
       ##
       enabled: false
+
+externalRedis:
+  host: ${redis_host}
+  port: ${redis_port}
+  databaseNumber: 1
+
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "${static_ip_name}"

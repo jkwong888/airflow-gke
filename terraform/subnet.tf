@@ -27,17 +27,6 @@ resource "google_compute_subnetwork" "subnet" {
   }
 }
 
-resource "google_compute_subnetwork" "additional_subnet" {
-  count         = var.create_subnet ? length(var.additional_subnets) : 0
-  name          = var.additional_subnets[count.index].name
-  ip_cidr_range = var.additional_subnets[count.index].primary_range
-  region        = var.additional_subnets[count.index].region
-  project       = data.google_project.host_project.project_id
-  network       = data.google_compute_network.shared_vpc.name
-
-  private_ip_google_access = true
-}
-
 data "google_compute_subnetwork" "subnet" {
   count         = var.create_subnet ? 0 : 1
   name          = var.subnet_name
@@ -78,31 +67,31 @@ resource "google_compute_subnetwork_iam_member" "container_network_user" {
   member = format("serviceAccount:service-%d@container-engine-robot.iam.gserviceaccount.com", data.google_project.service_project.number)
 }
 
-resource "google_compute_subnetwork_iam_member" "container_network_user_additional" {
-  count       = var.create_subnet ? length(var.additional_subnets) : 0
-  project     = data.google_project.host_project.project_id
-  region      = google_compute_subnetwork.additional_subnet[count.index].region
-  subnetwork  = google_compute_subnetwork.additional_subnet[count.index].name
-  role        = "roles/compute.networkUser"
-  member      = format("serviceAccount:service-%d@container-engine-robot.iam.gserviceaccount.com", data.google_project.service_project.number)
+resource "google_compute_global_address" "service_range" {
+  name          = "airflow-services"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = data.google_compute_network.shared_vpc.id
+  project       = data.google_project.host_project.project_id
 }
 
-resource "google_compute_subnetwork_iam_member" "cloudservices_network_user_additional" {
-  count       = var.create_subnet ? length(var.additional_subnets) : 0
-  project     = data.google_project.host_project.project_id
-  region      = google_compute_subnetwork.additional_subnet[count.index].region
-  subnetwork  = google_compute_subnetwork.additional_subnet[count.index].name
-  role        = "roles/compute.networkUser"
-  member      = format("serviceAccount:%d@cloudservices.gserviceaccount.com", data.google_project.service_project.number)
+resource "google_service_networking_connection" "private_service_connection" {
+  depends_on = [
+      google_project_service.service_project_computeapi,
+  ]
+
+  network                 = data.google_compute_network.shared_vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.service_range.name]
 }
 
-resource "google_compute_address" "airflow" {
-  name = "airflow-public"
-  project     = data.google_project.service_project.project_id
-  region        = var.subnet_region
+resource "google_compute_global_address" "airflow" {
+  name    = "airflow-public"
+  project = data.google_project.service_project.project_id
 
 }
 
 output "airflow_ip" {
-  value = google_compute_address.airflow.address
+  value = google_compute_global_address.airflow.address
 }

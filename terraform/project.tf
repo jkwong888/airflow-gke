@@ -10,6 +10,7 @@ locals {
   apis_to_enable = [
     "container.googleapis.com",
     "compute.googleapis.com",
+    "servicenetworking.googleapis.com",
   ]
 }
 

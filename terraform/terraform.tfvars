@@ -17,5 +17,5 @@ subnet_secondary_range = {
     services = "10.33.1.0/24"
 }
 
-gke_default_nodepool_max_size = 3
+airflow_dags_git_repo = "https://github.com/jkwong888/airflow-dags.git"
 

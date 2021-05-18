@@ -84,39 +84,7 @@ resource "google_container_cluster" "primary" {
       channel = "REGULAR"
   }
 
-  # We can't create a cluster with no node pool defined, but we want to only use
-  # separately managed node pools. So we create the smallest possible default
-  # node pool and immediately delete it.
-  remove_default_node_pool = true
-  initial_node_count       = 1
-
-  master_auth {
-    username = ""
-    password = ""
-
-    client_certificate_config {
-      issue_client_certificate = false
-    }
-  }
-
-  node_config {
-    preemptible  = var.gke_use_preemptible_nodes
-    machine_type = var.gke_default_nodepool_machine_type
-
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
-
-    service_account = google_service_account.gke_sa[0].email
-    oauth_scopes    = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-
-    workload_metadata_config {
-      node_metadata = "GKE_METADATA_SERVER"
-    }
-
-  }
+  enable_autopilot = true
 
   private_cluster_config {
     enable_private_nodes = var.gke_private_cluster     # nodes have private IPs only
@@ -139,41 +107,8 @@ resource "google_container_cluster" "primary" {
     services_secondary_range_name = var.gke_subnet_services_range_name
   }
 
-  workload_identity_config {
-    identity_namespace = "${data.google_project.service_project.project_id}.svc.id.goog"
-  }
-
 }
 
-resource "google_container_node_pool" "primary_preemptible_nodes" {
-  count      = var.create_gke ? 1 : 0
-  name       = format("%s-default-pvm", var.gke_cluster_name)
-  location   = var.gke_cluster_location
-  cluster    = google_container_cluster.primary[0].name
-  node_count = var.gke_default_nodepool_initial_size
-  project    = var.service_project_id
-
-  autoscaling {
-      min_node_count = var.gke_default_nodepool_min_size
-      max_node_count = var.gke_default_nodepool_max_size
-  }
-
-  node_config {
-    preemptible  = var.gke_use_preemptible_nodes
-    machine_type = var.gke_default_nodepool_machine_type
-
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
-
-    workload_metadata_config {
-      node_metadata = "GKE_METADATA_SERVER"
-    }
-
-    service_account = google_service_account.gke_sa[0].email
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-  }
-  
+output "gke_service_account" {
+  value = google_service_account.gke_sa[0].email
 }

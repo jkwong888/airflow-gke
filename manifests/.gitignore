@@ -1,0 +1,4 @@
+airflow-sa.yaml
+secret-redis-password.yaml
+secret-mysql-password.yaml
+airflow-cert.yaml

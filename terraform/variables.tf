@@ -56,22 +56,13 @@ variable "subnet_secondary_range" {
   default = {}
 }
 
-variable "additional_subnets" {
-  type = list(object({
-    name=string,
-    region=string,
-    primary_range=string,
-  }))
-  default = []
-}
-
 variable "gke_cluster_name" {
   description = "gke cluster name"
 }
 
 variable "gke_cluster_location" {
   description = "cluster location, either a region or a zone"
-  default = "us-central1-c"
+  default = "us-central1"
 }
 
 variable "gke_cluster_master_range" {
@@ -87,26 +78,13 @@ variable "gke_subnet_services_range_name" {
 }
 
 
-variable "gke_default_nodepool_initial_size" {
-    default = 1
-}
-
-variable "gke_default_nodepool_min_size" {
-    default = 0
-}
-
-variable "gke_default_nodepool_max_size" {
-    default = 2
-}
-
-variable "gke_default_nodepool_machine_type" {
-    default = "e2-standard-4"
-}
-
-variable "gke_use_preemptible_nodes" {
-    default = true
-}
-
 variable "gke_private_cluster" {
     default = true
+}
+
+variable "redis_memory_size_gb" {
+  default = 1
+}
+
+variable "airflow_dags_git_repo" {
 }
