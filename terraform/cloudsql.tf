@@ -6,7 +6,7 @@ resource "google_sql_database_instance" "airflow" {
   deletion_protection = false
 
   depends_on = [
-    google_service_networking_connection.private_service_connection,
+    //google_service_networking_connection.private_service_connection,
   ]
 
   settings {
@@ -54,15 +54,6 @@ resource "google_project_service" "cloudsql_adminapi" {
   service                    = "sqladmin.googleapis.com"
   disable_on_destroy         = false
   disable_dependent_services = false
-}
-
-resource "local_file" "mysql_secret_yaml" {
-  filename = "${path.module}/../manifests/secret-mysql-password.yaml"
-  content = templatefile("${path.module}/templates/secret-mysql-password.yaml.tpl",
-    {
-        password = random_password.mysql_password.result,
-    }
-  )
 }
 
 output "db_ip" {

@@ -7,7 +7,7 @@ resource "google_service_account" "airflow_sa" {
 resource "google_service_account_iam_member" "airflow_sa_role" {
   service_account_id = google_service_account.airflow_sa.name
   role = "roles/iam.workloadIdentityUser"
-  member = format("serviceAccount:%s.svc.id.goog[airflow/airflow]", data.google_project.service_project.project_id)
+  member = format("serviceAccount:%s.svc.id.goog[%s/airflow]", data.google_project.service_project.project_id, var.airflow_namespace)
 }
 
 output "airflow_service_account" {

@@ -23,10 +23,6 @@ variable "shared_vpc_host_project_id" {
   description = "The ID of the host project which hosts the shared VPC e.g. vpc-project"
 }
 
-variable "registry_project_id" {
-  description = "The ID of the project which hosts the container registry e.g. airflow-images"
-}
-
 variable "shared_vpc_network" {
   description = "The ID of the shared VPC e.g. shared-network"
 }
@@ -43,17 +39,11 @@ variable "create_subnet" {
   default = true
 }
 
-variable "create_gke" {
-  default = true
-}
-
 variable "subnet_primary_range" {
-
 }
 
 variable "subnet_secondary_range" {
   type = map(any)
-  default = {}
 }
 
 variable "gke_cluster_name" {
@@ -77,7 +67,6 @@ variable "gke_subnet_services_range_name" {
     default = "services"
 }
 
-
 variable "gke_private_cluster" {
     default = true
 }
@@ -87,4 +76,12 @@ variable "redis_memory_size_gb" {
 }
 
 variable "airflow_dags_git_repo" {
+}
+
+variable "airflow_namespace" {
+  description = "namespace in GKE where airflow will be installed"
+}
+
+variable "airflow_external_url" {
+  default = "airflow.example.com"
 }

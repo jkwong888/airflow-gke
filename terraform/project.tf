@@ -11,13 +11,13 @@ locals {
     "container.googleapis.com",
     "compute.googleapis.com",
     "servicenetworking.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "containerregistry.googleapis.com",
+    "sourcerepo.googleapis.com",
   ]
 }
 
 resource "google_project_service" "service_project_computeapi" {
-  lifecycle {
-
-  }
   count                      = length(local.apis_to_enable)
   project                    = data.google_project.service_project.project_id
   service                    = element(local.apis_to_enable, count.index)

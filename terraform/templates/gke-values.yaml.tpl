@@ -55,6 +55,10 @@ airflow:
   ##
   executor: KubernetesExecutor
 
+  image:
+    repository: ${airflow_image_repo}
+    tag: latest
+
   ## environment variables for the web/scheduler/worker Pods (for airflow configs)
   ##
   config:
@@ -167,7 +171,7 @@ web:
 
   ## sets `AIRFLOW__WEBSERVER__BASE_URL`
   ##
-  baseUrl: "https://airflow-cluster1.example.com/"
+  baseUrl: "https://${airflow_external_url}/"
 
   ## extra pip packages to install in the web container
   ##
@@ -495,3 +499,89 @@ ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.global-static-ip-name: "${static_ip_name}"
+    networking.gke.io/managed-certificates: "airflow-cert"
+
+extraManifests:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: airflow-cluster1-webserver-config
+  data:
+    webserver_config.py: |
+      import os
+      from airflow.configuration import conf
+      from flask_appbuilder.security.manager import AUTH_DB
+
+      basedir = os.path.abspath(os.path.dirname(__file__))
+
+      # The SQLAlchemy connection string.
+      SQLALCHEMY_DATABASE_URI = conf.get("core", "SQL_ALCHEMY_CONN")
+
+      # Flask-WTF flag for CSRF
+      CSRF_ENABLED = True
+
+      # Force users to re-auth after 15min of inactivity
+      PERMANENT_SESSION_LIFETIME = 900
+
+      # Don't allow user self registration
+      AUTH_USER_REGISTRATION = False
+      AUTH_USER_REGISTRATION_ROLE = "Viewer"
+
+      # Use Database authentication
+      AUTH_TYPE = AUTH_DB 
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: airflow-cluster1-fernet-key
+  stringData:
+    value: "${airflow_fernet_key}"
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: airflow-cluster1-mysql-password
+  stringData:
+    mysql-password: "${mysql_password}"
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: airflow-cluster1-git-keys
+  stringData:
+    git_key: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      -----END OPENSSH PRIVATE KEY-----
+    git_key.pub: |
+      ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX airflow-cluster1@gke-cluster
+    known_hosts: |
+      repo.example.com, ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+- apiVersion: networking.gke.io/v1
+  kind: ManagedCertificate
+  metadata:
+    name: airflow-cert
+  spec:
+    domains:
+      - ${airflow_external_url}

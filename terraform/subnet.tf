@@ -67,6 +67,7 @@ resource "google_compute_subnetwork_iam_member" "container_network_user" {
   member = format("serviceAccount:service-%d@container-engine-robot.iam.gserviceaccount.com", data.google_project.service_project.number)
 }
 
+/*
 resource "google_compute_global_address" "service_range" {
   name          = "airflow-services"
   purpose       = "VPC_PEERING"
@@ -85,6 +86,7 @@ resource "google_service_networking_connection" "private_service_connection" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.service_range.name]
 }
+*/
 
 resource "google_compute_global_address" "airflow" {
   name    = "airflow-public"

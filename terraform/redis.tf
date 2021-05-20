@@ -10,7 +10,7 @@ resource "google_project_service" "redis_api" {
 resource "google_redis_instance" "cache" {
   depends_on = [
       google_project_service.redis_api,
-      google_service_networking_connection.private_service_connection,
+  //    google_service_networking_connection.private_service_connection,
   ]
 
   name              = "airflow-redis"
