@@ -14,6 +14,8 @@ locals {
     "cloudbuild.googleapis.com",
     "containerregistry.googleapis.com",
     "sourcerepo.googleapis.com",
+    "iap.googleapis.com",
+    "redis.googleapis.com",
   ]
 }
 

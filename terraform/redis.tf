@@ -9,7 +9,7 @@ resource "google_project_service" "redis_api" {
 
 resource "google_redis_instance" "cache" {
   depends_on = [
-      google_project_service.redis_api,
+      google_project_service.service_project_computeapi,
   //    google_service_networking_connection.private_service_connection,
   ]
 

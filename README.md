@@ -27,6 +27,7 @@ subnet_secondary_range = {
 
 airflow_external_url = "airflow.gcp.jkwong.info"
 airflow_namespace = "default"
+airflow_admin_email = "myemail@my-domain.com"
 airflow_dags_git_repo = "https://github.com/jkwong888/airflow-dags.git"
 ```
 
@@ -65,9 +66,8 @@ This installs Airflow into the cluster with KubernetesExecutor.  The scheduler i
 
 The web ui exposed by the cluster will try to create a certificate over TLS, but you need to create an A record in DNS that maps the `airflow_external_url` to the IP that terraform spits out for `airflow_ip`.  Once you do this, and the DNS validation succeeds, you can connect to airflow using the name in `airflow_external_url` with sweet encryption.  In the meantime you can hit the IP on port 80 to get an unencrypted connection to the airflow web UI.
 
-Use `admin`/`admin` to login.
+The terraform sets up Identity Aware Proxy so the front page of airflow should be protected by Google Cloud Identity tied to the organization the project is located in.  You can add users that are allowed to connect to the web UI by giving them the role `IAP Secured Web App User` on the backend or at the project level if this is the only backend in the project.  Once you get passed that authentication, you can use `admin`/`admin` to login and manage users in Airflow optionally..
 
 There's still some crap in here to clean up, will do it later:
-- there's no authentication beyond the `admin` user - add support for IAP in the BackendConfig (some manual steps to get the oauth clientid)
 - git ssh keys and http keys for git sync are not parametrized - it uses public github to sync dags for now.  This process is pretty straightforward, just annoying to parametrize into terraform variables.
 

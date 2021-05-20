@@ -6,6 +6,7 @@ resource "google_sql_database_instance" "airflow" {
   deletion_protection = false
 
   depends_on = [
+    google_project_service.service_project_computeapi,
     //google_service_networking_connection.private_service_connection,
   ]
 

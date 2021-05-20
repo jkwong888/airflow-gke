@@ -32,6 +32,8 @@ resource "local_file" "airflow_helm_values_yaml" {
       redis_port = google_redis_instance.cache.port
       static_ip_name = google_compute_global_address.airflow.name
       mysql_password = random_password.mysql_password.result,
+      iap_client_id = google_iap_client.project_client.client_id,
+      iap_client_secret = google_iap_client.project_client.secret,
     }
   )
 }

@@ -164,6 +164,7 @@ web:
   service:
     annotations:
       cloud.google.com/neg: '{"ingress": true}' 
+      beta.cloud.google.com/backend-config: '{"default": "airflow-iap"}'
     type: ClusterIP
     externalPort: 80
     loadBalancerIP: ${airflow_external_ip}
@@ -497,9 +498,11 @@ externalRedis:
 
 ingress:
   enabled: true
-  annotations:
-    kubernetes.io/ingress.global-static-ip-name: "${static_ip_name}"
-    networking.gke.io/managed-certificates: "airflow-cert"
+  web:
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "${static_ip_name}"
+      networking.gke.io/managed-certificates: "airflow-cert"
+    host: "${airflow_external_url}"
 
 extraManifests:
 - apiVersion: v1
@@ -585,3 +588,20 @@ extraManifests:
   spec:
     domains:
       - ${airflow_external_url}
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: airflow-iap-oauth-secret
+  stringData:
+    client_id: ${iap_client_id}
+    client_secret: ${iap_client_secret}
+- apiVersion: cloud.google.com/v1
+  kind: BackendConfig
+  metadata:
+    name: airflow-iap
+  spec:
+    iap:
+      enabled: true
+      oauthclientCredentials:
+        secretName: airflow-iap-oauth-secret
+      

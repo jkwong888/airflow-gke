@@ -85,3 +85,6 @@ variable "airflow_namespace" {
 variable "airflow_external_url" {
   default = "airflow.example.com"
 }
+
+variable "airflow_admin_email" {
+}
